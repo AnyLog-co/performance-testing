@@ -160,6 +160,23 @@ def print_rows(row_counter:int):
         row = __generate_row(total_rows=row_counter, row_counter=i)
         print(json.dumps(row))
 
+def bkup_data(db_name:str, row_counter:int):
+    file_name = f'{db_name}.rand_data.0.json'
+    data = []
+    for row in range(row_counter):
+        data.append(json.dumps(__generate_row(total_rows=row_counter, row_counter=row)))
+
+    for row in data:
+        try:
+            with open(file_name, 'w') as f:
+                try:
+                    f.write(row+"\n")
+                except Exception as error:
+                    print(f'Failed to append to {file_name} (Error: {error})')
+        except Exception as error:
+            print(f'Failed to open {file_name} (Error: {error})')
+
+
 def insert_data(conn:str, row_counter:int, db_name:str)->int:
     """
     Process to insert data into AnyLog via REST
@@ -168,21 +185,28 @@ def insert_data(conn:str, row_counter:int, db_name:str)->int:
         row_counter:int - total number of rows to insert
         db_name:str - logical table name
     :params:
+        status:bool
+        conns:list -
         data:list - generated row(s)
         insert_counter:int - number of insert processes that occured
         processing_time:float - amount of time insert processs(es) took
     :return:
         processing_time + insert_counter
     """
+    conns = conn.split(',')
+    conn_value = 0
     data = []
     insert_counter = 0
     processing_time = 0
     for i in range(row_counter):
         data.append(__generate_row(total_rows=row_counter, row_counter=i))
         if len(data) % 1000 == 0:
-            status, processing_time = __insert_data(conn=conn, db_name=db_name, payloads=json.dumps(data), processing_time=processing_time)
+            status, processing_time = __insert_data(conn=conns[conn_value], db_name=db_name, payloads=json.dumps(data), processing_time=processing_time)
             if status is True:
                 insert_counter += 1
+            conn_value += 1
+            if conn_value == len(conns):
+                conn_value = 0
             data = []
     if len(data) != 0:
         status, processing_time = __insert_data(conn=conn, db_name=db_name, payloads=json.dumps(data), processing_time=processing_time)
@@ -260,6 +284,7 @@ def main():
     The following provides the ability to insert data into AnyLog against logical table rand_data.
     :positional arguments:
       conn               REST connection info. If print then rows will be printed to screen
+        - options: print, file, ip:port,ip:port,ip:port...
     :optional arguments:
       -h, --help         show this help message and exit
       --db-name DB_NAME  logical database name
@@ -273,21 +298,20 @@ def main():
     parser.add_argument('--rows', type=int, default=100000, help='Number of row to insert')
     args = parser.parse_args()
 
-    start_time = datetime.datetime.utcnow()
-    if args.conn == 'print':
+    if args.conn == 'print': # print rows to screen
         print_rows(row_counter=args.rows)
-    else:
+    elif args.conn == 'file': # store rows in {db_name}.rand_data.0.json file
+        bkup_data(db_name=args.db_name, row_counter=args.rows)
+    else: # send data to operator(s) via REST PUT
+        start_time = datetime.datetime.now()
         processing_time, number_inserts = insert_data(conn=args.conn, row_counter=args.rows, db_name=args.db_name)
-    anylog_rows_inserted, anylog_insert_time = insert_time(conn=args.conn, total_rows=args.rows, db_name=args.db_name)
-    end_time = datetime.datetime.utcnow()
+        anylog_rows_inserted, anylog_insert_time = insert_time(conn=args.conn, total_rows=args.rows, db_name=args.db_name)
+        end_time = datetime.datetime.utcnow()
 
-    print_summary(start_time=start_time, end_time=end_time, total_rows=args.rows,
-                  anylog_rows_inserted=anylog_rows_inserted, processing_time=datetime.timedelta(seconds=processing_time),
-                  anylog_insert_time=anylog_insert_time)
-
+        print_summary(start_time=start_time, end_time=end_time, total_rows=args.rows,
+                      anylog_rows_inserted=anylog_rows_inserted, processing_time=datetime.timedelta(seconds=processing_time),
+                      anylog_insert_time=anylog_insert_time)
 
 if __name__ == '__main__':
     main()
-
-
 
