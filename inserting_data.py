@@ -18,7 +18,7 @@ SECOND_INCREMENTS = 0.864
 ROWS_24h_INCREMENTS = 100000
 
 
-def __insert_data(conn:str, db_name:str, payloads:list, processing_time:float)->bool:
+def __insert_data(conn:str, db_name:str, payloads:str, processing_time:float)->bool:
     """
     Execute Insert data via REST PUT command
     :args:
@@ -148,7 +148,7 @@ def __insertion_time(conn:str, db_name:str)->datetime.timedelta:
     return max_ts - min_ts
 
 
-def print_rows(row_counter:int):
+def print_rows(total_rows:int):
     """
     Print rows N rows
     :args:
@@ -156,15 +156,15 @@ def print_rows(row_counter:int):
     :params:
         row:str - generated row
     """
-    for i in range(row_counter):
-        row = __generate_row(total_rows=row_counter, row_counter=i)
+    for i in range(total_rows):
+        row = __generate_row(total_rows=total_rows, row_counter=i)
         print(json.dumps(row))
 
-def bkup_data(db_name:str, row_counter:int):
+def bkup_data(db_name:str, total_rows:int):
     file_name = f'{db_name}.rand_data.0.json'
     data = []
-    for row in range(row_counter):
-        data.append(json.dumps(__generate_row(total_rows=row_counter, row_counter=row)))
+    for row in range(total_rows):
+        data.append(json.dumps(__generate_row(total_rows=total_rows, row_counter=row)))
 
     for row in data:
         try:
@@ -177,7 +177,7 @@ def bkup_data(db_name:str, row_counter:int):
             print(f'Failed to open {file_name} (Error: {error})')
 
 
-def insert_data(conn:str, row_counter:int, db_name:str)->int:
+def insert_data(conn:str, total_rows:int, db_name:str)->int:
     """
     Process to insert data into AnyLog via REST
     :args:
@@ -198,10 +198,11 @@ def insert_data(conn:str, row_counter:int, db_name:str)->int:
     data = []
     insert_counter = 0
     processing_time = 0
-    for i in range(row_counter):
-        data.append(__generate_row(total_rows=row_counter, row_counter=i))
+    for i in range(total_rows):
+        data.append(__generate_row(total_rows=total_rows, row_counter=i))
         if len(data) % 1000 == 0:
-            status, processing_time = __insert_data(conn=conns[conn_value], db_name=db_name, payloads=json.dumps(data), processing_time=processing_time)
+            status, processing_time = __insert_data(conn=conns[conn_value], db_name=db_name, payloads=json.dumps(data),
+                                                processing_time=processing_time)
             if status is True:
                 insert_counter += 1
             conn_value += 1
@@ -209,7 +210,8 @@ def insert_data(conn:str, row_counter:int, db_name:str)->int:
                 conn_value = 0
             data = []
     if len(data) != 0:
-        status, processing_time = __insert_data(conn=conn, db_name=db_name, payloads=json.dumps(data), processing_time=processing_time)
+        status, processing_time = __insert_data(conn=conns[conn_value], db_name=db_name,
+                                                payloads=json.dumps(data), processing_time=processing_time)
         if status is True:
             insert_counter += 1
 
@@ -233,13 +235,19 @@ def insert_time(conn:str, total_rows:int, db_name:str):
     """
     status = False
     counter = 0
+    conns = conn.split(',')
+    conn_value = 0
+    row_count = 0
     while status is False:
-        row_count = __get_row_count(conn=conn, db_name=db_name)
+        row_count = __get_row_count(conn=conns[conn_value], db_name=db_name)
         if row_count >= total_rows or counter > 30: # wait about 15 minutes
             status = True
         else:
             time.sleep(30)
             counter += 1
+        conn_value += 1
+        if conn_value == len(conns):
+            conn_value = 0
 
     return row_count, __insertion_time(conn=conn, db_name=db_name)
 
@@ -295,20 +303,21 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('conn', type=str, default='print', help='REST connection info. If print then rows will be printed to screen')
     parser.add_argument('--db-name', type=str, default='test', help='logical database name')
-    parser.add_argument('--rows', type=int, default=100000, help='Number of row to insert')
+    parser.add_argument('--table-name', type=str, default='rand_data', help='table to store data in')
+    parser.add_argument('--total-rows', type=int, default=100000, help='Number of row to insert')
     args = parser.parse_args()
 
     if args.conn == 'print': # print rows to screen
-        print_rows(row_counter=args.rows)
+        print_rows(total_rows=args.total_rows)
     elif args.conn == 'file': # store rows in {db_name}.rand_data.0.json file
-        bkup_data(db_name=args.db_name, row_counter=args.rows)
+        bkup_data(db_name=args.db_name, total_rows=args.total_rows)
     else: # send data to operator(s) via REST PUT
         start_time = datetime.datetime.now()
-        processing_time, number_inserts = insert_data(conn=args.conn, row_counter=args.rows, db_name=args.db_name)
-        anylog_rows_inserted, anylog_insert_time = insert_time(conn=args.conn, total_rows=args.rows, db_name=args.db_name)
+        processing_time, number_inserts = insert_data(conn=args.conn, total_rows=args.total_rows, db_name=args.db_name)
+        anylog_rows_inserted, anylog_insert_time = insert_time(conn=args.conn, total_rows=args.total_rows, db_name=args.db_name)
         end_time = datetime.datetime.utcnow()
 
-        print_summary(start_time=start_time, end_time=end_time, total_rows=args.rows,
+        print_summary(start_time=start_time, end_time=end_time, total_rows=args.total_rows,
                       anylog_rows_inserted=anylog_rows_inserted, processing_time=datetime.timedelta(seconds=processing_time),
                       anylog_insert_time=anylog_insert_time)
 
