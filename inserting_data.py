@@ -18,12 +18,13 @@ SECOND_INCREMENTS = 0.864
 ROWS_24h_INCREMENTS = 100000
 
 
-def __insert_data(conn:str, db_name:str, payloads:str, processing_time:float)->bool:
+def __insert_data(conn:str, db_name:str, table_name:str, payloads:str, processing_time:float)->(bool, float):
     """
     Execute Insert data via REST PUT command
     :args:
         conn:str - REST connection information
         db_name:str - logical database name
+        table_name:str - physical table data is stored in
         payloads:list - list of data to push into  AnyLog
         processing_time:float - historically how long data has been pushed into AnyLoog
     :params:
@@ -37,7 +38,7 @@ def __insert_data(conn:str, db_name:str, payloads:str, processing_time:float)->b
     header = {
         'type': 'json',
         'dbms': db_name,
-        'table': 'rand_data',
+        'table': table_name,
         'mode': 'streaming',
         'Content-Type': 'text/plain'
     }
@@ -58,7 +59,7 @@ def __insert_data(conn:str, db_name:str, payloads:str, processing_time:float)->b
     return status, processing_time
 
 
-def __generate_row(total_rows:int, row_counter:int)->str:
+def __generate_row(total_rows:int, row_counter:int)->dict:
     """
     Generate row to be inserted
     :global:
@@ -82,12 +83,13 @@ def __generate_row(total_rows:int, row_counter:int)->str:
     return row
 
 
-def __get_row_count(conn:str, db_name:str)->int:
+def __get_row_count(conn:str, db_name:str, table_name:str)->int:
     """
     Get row count
     :args:
         conn:str - REST connection info
         db_name:str - logical table name
+        table_name:str - physical table to store data in
     :params:
         header:dict - REST header
         r:requests.GET - request GET
@@ -95,7 +97,7 @@ def __get_row_count(conn:str, db_name:str)->int:
         row count
     """
     header = {
-        'command': f'sql {db_name} stat=false and format=json select count(*) as row_count from rand_data;',
+        'command': f'sql {db_name} stat=false and format=json select count(*) as row_count from {table_name};',
         "User-Agent": "AnyLog/1.23",
         "destination": "network"
     }
@@ -113,12 +115,13 @@ def __get_row_count(conn:str, db_name:str)->int:
                 return 0
 
 
-def __insertion_time(conn:str, db_name:str)->datetime.timedelta:
+def __insertion_time(conn:str, db_name:str, table_name:str)->datetime.timedelta:
     """
     Insert time
     :args:
         conn:str - REST connection info
         db_name:str - logical table name
+        table_name:str - physical table to store data in
     :params:
         format:str - insert_timestamp value format to covert from string to datetime
         header:dict - REST header information
@@ -129,7 +132,7 @@ def __insertion_time(conn:str, db_name:str)->datetime.timedelta:
     """
     format = '%Y-%m-%d %H:%M:%S.%f'
     header = {
-        "command": f'sql  {db_name} stat=false and format=json select min(insert_timestamp) as min_ts, max(insert_timestamp) as max_ts from rand_data;',
+        "command": f'sql  {db_name} stat=false and format=json select min(insert_timestamp) as min_ts, max(insert_timestamp) as max_ts from {table_name};',
         "User-Agent": "AnyLog/1.23",
         "destination": "network"
     }
@@ -139,8 +142,8 @@ def __insertion_time(conn:str, db_name:str)->datetime.timedelta:
         print(f'Failed to execute GET against {conn} (Error: {error})')
     else:
         if int(r.status_code) != 200:
-            print(f'FAiled to execute GET against {conn} (Error: {error})')
-            return
+            print(f'FAiled to execute GET against {conn} (Error: {r.status_code})')
+            return None
 
     min_ts = datetime.datetime.strptime(r.json()['Query'][0]['min_ts'], format)
     max_ts = datetime.datetime.strptime(r.json()['Query'][0]['max_ts'], format)
@@ -160,8 +163,8 @@ def print_rows(total_rows:int):
         row = __generate_row(total_rows=total_rows, row_counter=i)
         print(json.dumps(row))
 
-def bkup_data(db_name:str, total_rows:int):
-    file_name = f'{db_name}.rand_data.0.json'
+def bkup_data(db_name:str, table_name:str, total_rows:int):
+    file_name = f'{db_name}.{table_name}.0.json'
     data = []
     for row in range(total_rows):
         data.append(json.dumps(__generate_row(total_rows=total_rows, row_counter=row)))
@@ -177,13 +180,14 @@ def bkup_data(db_name:str, total_rows:int):
             print(f'Failed to open {file_name} (Error: {error})')
 
 
-def insert_data(conn:str, total_rows:int, db_name:str)->int:
+def insert_data(conn:str, total_rows:int, db_name:str, table_name:str)->(int, float):
     """
     Process to insert data into AnyLog via REST
     :args:
         conn:str - REST connection information
         row_counter:int - total number of rows to insert
         db_name:str - logical table name
+        table_name:str - physical table name
     :params:
         status:bool
         conns:list -
@@ -201,8 +205,8 @@ def insert_data(conn:str, total_rows:int, db_name:str)->int:
     for i in range(total_rows):
         data.append(__generate_row(total_rows=total_rows, row_counter=i))
         if len(data) % 1000 == 0:
-            status, processing_time = __insert_data(conn=conns[conn_value], db_name=db_name, payloads=json.dumps(data),
-                                                processing_time=processing_time)
+            status, processing_time = __insert_data(conn=conns[conn_value], db_name=db_name, table_name=table_name,
+                                                    payloads=json.dumps(data), processing_time=processing_time)
             if status is True:
                 insert_counter += 1
             conn_value += 1
@@ -210,7 +214,7 @@ def insert_data(conn:str, total_rows:int, db_name:str)->int:
                 conn_value = 0
             data = []
     if len(data) != 0:
-        status, processing_time = __insert_data(conn=conns[conn_value], db_name=db_name,
+        status, processing_time = __insert_data(conn=conns[conn_value], db_name=db_name, table_name=table_name,
                                                 payloads=json.dumps(data), processing_time=processing_time)
         if status is True:
             insert_counter += 1
@@ -218,7 +222,7 @@ def insert_data(conn:str, total_rows:int, db_name:str)->int:
     return processing_time, insert_counter
 
 
-def insert_time(conn:str, total_rows:int, db_name:str):
+def insert_time(conn:str, total_rows:int, db_name:str, table_name:str):
     """
     Calculate AnyLong insert time
     :note:
@@ -227,6 +231,7 @@ def insert_time(conn:str, total_rows:int, db_name:str):
         conn:str - REST connection info
         total_rows:int - total number of rows inserted into AnyLog
         db_name:str - logical database name
+        table_name:str - physical table name
     :params:
         status:bool
         row_count:int - number of rows inserted
@@ -239,7 +244,7 @@ def insert_time(conn:str, total_rows:int, db_name:str):
     conn_value = 0
     row_count = 0
     while status is False:
-        row_count = __get_row_count(conn=conns[conn_value], db_name=db_name)
+        row_count = __get_row_count(conn=conns[conn_value], db_name=db_name, table_name=table_name)
         if row_count >= total_rows or counter > 30: # wait about 15 minutes
             status = True
         else:
@@ -249,7 +254,7 @@ def insert_time(conn:str, total_rows:int, db_name:str):
         if conn_value == len(conns):
             conn_value = 0
 
-    return row_count, __insertion_time(conn=conn, db_name=db_name)
+    return row_count, __insertion_time(conn=conn, db_name=db_name, table_name=table_name)
 
 
 def print_summary(start_time:datetime.datetime, end_time:datetime.datetime, total_rows:int, anylog_rows_inserted:int,
@@ -310,11 +315,13 @@ def main():
     if args.conn == 'print': # print rows to screen
         print_rows(total_rows=args.total_rows)
     elif args.conn == 'file': # store rows in {db_name}.rand_data.0.json file
-        bkup_data(db_name=args.db_name, total_rows=args.total_rows)
+        bkup_data(db_name=args.db_name, total_rows=args.total_rows, table_name=args.table_name)
     else: # send data to operator(s) via REST PUT
         start_time = datetime.datetime.now()
-        processing_time, number_inserts = insert_data(conn=args.conn, total_rows=args.total_rows, db_name=args.db_name)
-        anylog_rows_inserted, anylog_insert_time = insert_time(conn=args.conn, total_rows=args.total_rows, db_name=args.db_name)
+        processing_time, number_inserts = insert_data(conn=args.conn, total_rows=args.total_rows, db_name=args.db_name,
+                                                      table_name=args.table_name)
+        anylog_rows_inserted, anylog_insert_time = insert_time(conn=args.conn, total_rows=args.total_rows,
+                                                               db_name=args.db_name, table_name=args.table_name)
         end_time = datetime.datetime.utcnow()
 
         print_summary(start_time=start_time, end_time=end_time, total_rows=args.total_rows,
