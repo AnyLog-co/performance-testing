@@ -7,8 +7,12 @@ details of using AnyLog.
 
 
 ## Deploying Nodes
-The following requires 6 machines either physical or virtual, that can communicate with one another
+The following requires 6 machines either physical or virtual, that can communicate with one another. The original 
+performance testing was done in comperecent of 1, 2 and 4 operator nodes, each associated to a different cluster; as 
+shown in the diagram below. 
+
 ![peformance diagram](Performance_Testing_Diagram.png)
+
 
 * Setting Up _Master Node_ on Machine 1 
   1. Clone _performance-testing_ and log into _anyloguser_ on **all** machines
@@ -37,6 +41,8 @@ The following requires 6 machines either physical or virtual, that can communica
     REST     |172.104.138.63:32049|172.104.138.63:32049|
     Messaging|Not declared        |Not declared        |
   ```
+  
+
 * Setting Up _Query Node_ - The query node is deployed with our [Remote-CLI](https://github.com/AnyLog-co/documentation/blob/master/northbound%20connectors/remote_cli.md)
   1. Clone _performance-testing_ and log into _anyloguser_ on **all** machines
   ```shell
@@ -58,6 +64,8 @@ The following requires 6 machines either physical or virtual, that can communica
   cd performance-testing/deployments/query-remote-cli 
   docker-compose up -d 
   ```
+  
+
 * Setting up _Operator Node_ - Repeat the following steps on each physical node that will act as an operator. Keep in  
 in mind that each _anylog-operator_ directory is associated o a **unique** cluster.  
   1. Clone _performance-testing_ and log into _anyloguser_ on **all** machines
