@@ -7,7 +7,7 @@ details of using AnyLog.
 
 
 ## Deploying Nodes
-The following requires 6 machines either physical or virtual, that can communicate with one another. The original 
+The following requires 6 machines, either physical or virtual, that can communicate with one another. The original 
 performance testing was done in comperecent of 1, 2 and 4 operator nodes, each associated to a different cluster; as 
 shown in the diagram below. 
 
