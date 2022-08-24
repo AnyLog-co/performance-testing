@@ -88,5 +88,21 @@ in mind that each _anylog-operator_ directory is associated o a **unique** clust
   cd performance-testing/deployments/query-remote-cli 
   docker-compose up -d 
   ```
-  
+### Deployment Notes
+* Feel free to change any othwr configurations in the anylog_configs.env file(s).
+* To attach to a node: `docker attach --detach-keys="ctrl-d" ${NODE_NAME}`
+* The service name for all operator(s) is `anylog-operator`. as such it not possible to run multiple operators on the 
+same machine using this package. 
 
+## Generating Data
+The [data_generator.py](data_generator.py) will send a user-defined number of timestamp/value rows into 1 or more 
+Operator nodes; using REST POST. When sending data to multiple operators, the data generator uses a round-robin mechanism 
+to select which node to send data to. 
+```shell
+cd performance-testing/
+# one node 
+python3 data_generator.py ${OPERATOR_IP}:${OPERATOR_PORT} --db-name test --table-name rand_data --total-rows 100000
+
+# multiple nodes
+python3 data_generator.py ${OPERATOR_IP_1}:${OPERATOR_PORT_1},${OPERATOR_IP_2}:${OPERATOR_PORT_2} --db-name test --table-name rand_data --total-rows 100000
+```

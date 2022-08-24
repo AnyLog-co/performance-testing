@@ -245,7 +245,7 @@ def insert_time(conn:str, total_rows:int, db_name:str, table_name:str):
     row_count = 0
     while status is False:
         row_count = __get_row_count(conn=conns[conn_value], db_name=db_name, table_name=table_name)
-        if row_count >= total_rows or counter > 30: # wait about 15 minutes
+        if row_count >= total_rows:
             status = True
         else:
             time.sleep(30)
