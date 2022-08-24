@@ -73,7 +73,7 @@ in mind that each _anylog-operator_ directory is associated o a **unique** clust
   git clone https://github.com/AnyLog-co/performance-testing
   docker login -u anyloguser -p ${USER_API_PASSWORD}
   ```
-  2. Update `ledger_conn` value in [anylog_configs.env](deployments/anylog-operator1/anylog_config.env) 
+  2. Update `ledger_conn` value in [anylog_configs.env](deployments/anylog-operator1/anylog_configs.env) 
   ```dotenv
   # vim deployments/query-remote-cli/anylog_configs.env
   
