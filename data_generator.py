@@ -1,6 +1,7 @@
 import argparse
 import datetime
 import json
+import math
 import os
 import random
 import requests
@@ -16,6 +17,22 @@ sys.path.insert(0, PROTOCOLS)
 START_TIMESTAMP = datetime.datetime.utcnow()
 SECOND_INCREMENTS = 0.864
 ROWS_24h_INCREMENTS = 100000
+
+VALUE_ARRAY = [
+   -1 * math.pi, -1 * math.pi/2, -1 * math.pi/3,
+   -1,
+   -1 * math.pi/4, -1 * math.pi/6, -1 * math.pi/8,
+   0,
+   math.pi/8, math.pi/6, math.pi/4, 1,
+   math.pi/3, math.pi/2, math.pi,
+   math.pi, math.pi/2, math.pi/3,
+   1,
+   math.pi/4, math.pi/6, math.pi/8,
+   0,
+   -1 * math.pi/8, -1 * math.pi/6, -1 * math.pi/4,
+   -1,
+   -1 * math.pi/3, -1 * math.pi/2, -1 * math.pi
+]
 
 
 def __insert_data(conn:str, db_name:str, table_name:str, payloads:str, processing_time:float)->(bool, float):
@@ -59,7 +76,7 @@ def __insert_data(conn:str, db_name:str, table_name:str, payloads:str, processin
     return status, processing_time
 
 
-def __generate_row(total_rows:int, row_counter:int)->dict:
+def __generate_row(value:float, total_rows:int, row_counter:int)->dict:
     """
     Generate row to be inserted
     :global:
@@ -67,18 +84,30 @@ def __generate_row(total_rows:int, row_counter:int)->dict:
         SECOND_INCREMENTS:float - Based on ROWS_24h_INCREMENTS, calculate increments for 24 hour period
         ROWS_24h_INCREMENTS:int - based number of rows in 24 hours
     :args:
+        value:float - pi value for VALUE_ARRAY
         total_rows:int - total number of row to insert
         row_counter:int - current row to insert
     :params:
+        row_value:float - trig calculation based on value
+            - if row_counter % 10 - use tangent
+            - if row_counter % 2 - use sine
+            - else - use cosine
         seconds:float - increments size
         now:datetime.datetime - row timestamp
         row:dict - {timestamp, value} object to store in operator
     :return:
-        row as JSON string
+        row
     """
+    if row_counter % 10 == 0:
+        row_value = math.tan(value)
+    if row_counter % 2 == 0:
+        row_value = math.sin(value)
+    else:
+        row_value = math.cos(value)
+
     seconds = SECOND_INCREMENTS * (ROWS_24h_INCREMENTS/total_rows) * row_counter
     now = START_TIMESTAMP + datetime.timedelta(seconds=seconds)
-    row = {'timestamp': now.strftime('%Y-%m-%d %H:%M:%S.%f'), 'value': round(random.random() * 100, 4)}
+    row = {'timestamp': now.strftime('%Y-%m-%d %H:%M:%S.%f'), 'value': row_value}
 
     return row
 
@@ -158,24 +187,48 @@ def print_rows(total_rows:int):
         row_counter:int - number of rows to print
     :params:
         row:str - generated row
+    :sample print:
+        {"timestamp": "2022-08-28 17:37:53.195830", "value": -0.8414709848078965s}
     """
-    for i in range(total_rows):
-        row = __generate_row(total_rows=total_rows, row_counter=i)
-        print(json.dumps(row))
+    row_counter = 0
+    while row_counter < total_rows:
+        for value in VALUE_ARRAY:
+            if row_counter < total_rows:
+                row = __generate_row(value=value, total_rows=total_rows, row_counter=row_counter)
+                print(json.dumps(row))
+                row_counter += 1
 
-def bkup_data(db_name:str, table_name:str, total_rows:int):
+
+def data_to_file(db_name:str, table_name:str, total_rows:int):
+    """
+    store content to file
+    :args:
+        db_name:str - logical database name
+        table_name:str - table to store data in
+        tota_rows:int - total number of rows
+    :params:
+        file_name:str - file to store data in [file name: {db_name}.{table_name}.0.json]
+        data:list - list of rows to store into file
+        row_counter:int - number of rows generated
+    """
     file_name = f'{db_name}.{table_name}.0.json'
     data = []
-    for row in range(total_rows):
-        data.append(json.dumps(__generate_row(total_rows=total_rows, row_counter=row)))
-
-    for row in data:
+    row_counter = 0
+    while row_counter < total_rows:
+        for value in VALUE_ARRAY:
+            if row_counter < total_rows:
+                data.append(json.dumps(__generate_row(value=value, total_rows=total_rows, row_counter=row_counter)))
+                row_counter += 1
         try:
             with open(file_name, 'w') as f:
-                try:
-                    f.write(row+"\n")
-                except Exception as error:
-                    print(f'Failed to append to {file_name} (Error: {error})')
+                for row in data:
+                    try:
+                        if row != data[-1]:
+                            f.write(row+",\n")
+                        else:
+                            f.write(row)
+                    except Exception as error:
+                        print(f'Failed to append to {file_name} (Error: {error})')
         except Exception as error:
             print(f'Failed to open {file_name} (Error: {error})')
 
@@ -192,7 +245,7 @@ def insert_data(conn:str, total_rows:int, db_name:str, table_name:str)->(int, fl
         status:bool
         conns:list -
         data:list - generated row(s)
-        insert_counter:int - number of insert processes that occured
+        insert_counter:int - number of insert processes that occurred
         processing_time:float - amount of time insert processs(es) took
     :return:
         processing_time + insert_counter
@@ -202,22 +255,23 @@ def insert_data(conn:str, total_rows:int, db_name:str, table_name:str)->(int, fl
     data = []
     insert_counter = 0
     processing_time = 0
-    for i in range(total_rows):
-        data.append(__generate_row(total_rows=total_rows, row_counter=i))
-        if len(data) % 1000 == 0:
-            status, processing_time = __insert_data(conn=conns[conn_value], db_name=db_name, table_name=table_name,
-                                                    payloads=json.dumps(data), processing_time=processing_time)
-            if status is True:
-                insert_counter += 1
-            conn_value += 1
-            if conn_value == len(conns):
-                conn_value = 0
-            data = []
-    if len(data) != 0:
-        status, processing_time = __insert_data(conn=conns[conn_value], db_name=db_name, table_name=table_name,
-                                                payloads=json.dumps(data), processing_time=processing_time)
-        if status is True:
-            insert_counter += 1
+    row_counter = 0
+    while row_counter < total_rows:
+        for value in VALUE_ARRAY:
+            if row_counter < total_rows:
+                data.append(__generate_row(value=value, total_rows=total_rows, row_counter=row_counter))
+                row_counter += 1
+                if len(data) % 1000 == 0 or row_counter >= total_rows:
+                    payloads = json.dumps(data)
+                    status, processing_time = __insert_data(conn=conns[conn_value], db_name=db_name,
+                                                            table_name=table_name, payloads=payloads,
+                                                            processing_time=processing_time)
+                    if status is True:
+                        insert_counter += 1
+                        data = []
+                    conn_value += 1
+                    if conn_value == len(conns):
+                        conn_value = 0
 
     return processing_time, insert_counter
 
@@ -315,7 +369,7 @@ def main():
     if args.conn == 'print': # print rows to screen
         print_rows(total_rows=args.total_rows)
     elif args.conn == 'file': # store rows in {db_name}.rand_data.0.json file
-        bkup_data(db_name=args.db_name, total_rows=args.total_rows, table_name=args.table_name)
+        data_to_file(db_name=args.db_name, total_rows=args.total_rows, table_name=args.table_name)
     else: # send data to operator(s) via REST PUT
         start_time = datetime.datetime.now()
         processing_time, number_inserts = insert_data(conn=args.conn, total_rows=args.total_rows, db_name=args.db_name,
