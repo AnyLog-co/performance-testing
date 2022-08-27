@@ -14,7 +14,7 @@ PROTOCOLS = os.path.join(ROOT_PATH, 'protocols')
 sys.path.insert(0, DATA_GENERATORS)
 sys.path.insert(0, PROTOCOLS)
 
-START_TIMESTAMP = datetime.datetime.utcnow()
+START_TIMESTAMP = datetime.datetime(year=2022, month=8, day=27, hour=15, minute=50, second=12, microsecond=577987)
 SECOND_INCREMENTS = 0.864
 ROWS_24h_INCREMENTS = 100000
 
@@ -98,12 +98,11 @@ def __generate_row(value:float, total_rows:int, row_counter:int)->dict:
     :return:
         row
     """
+    row_value = math.cos(value)
     if row_counter % 10 == 0:
         row_value = math.tan(value)
     if row_counter % 2 == 0:
         row_value = math.sin(value)
-    else:
-        row_value = math.cos(value)
 
     seconds = SECOND_INCREMENTS * (ROWS_24h_INCREMENTS/total_rows) * row_counter
     now = START_TIMESTAMP + datetime.timedelta(seconds=seconds)
