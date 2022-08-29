@@ -4,7 +4,7 @@ import requests
 CONN = '172.105.37.122:32149'
 DB_NAME = 'test'
 TABLE_NAME = 'rand_data2'
-NUM_ROWS = 1000000
+NUM_ROWS = 100000000
 
 
 EXPECT_RESULTS = {
@@ -113,6 +113,12 @@ EXPECT_RESULTS = {
             24: [{'min_ts': '2022-08-27 15:50:12.577987', 'max_ts': '2022-08-27 23:59:59.991427', 'min_val': -1.0, 'max_val': 1.0, 'avg_val': 0.20248775349138218, 'row_count': 3401322},
                  {'min_ts': '2022-08-28 00:00:00.000067', 'max_ts': '2022-08-28 15:50:12.569347', 'min_val': -1.0, 'max_val': 1.0, 'avg_val': 0.20248747388962454, 'row_count': 6598678}]
         }
+    },
+    100000000: {
+        'insert_time': datetime.timedelta(hours=4),
+        'increments_per_hour': {
+            1: []
+        }
     }
 }
 
@@ -201,6 +207,7 @@ def test_increments_per_hour1():
             +f"max(value) as max_val, avg(value) as avg_val, count(*) as row_count FROM {TABLE_NAME} "
             +"ORDER BY min_ts, max_ts")
     results = get_results(query=query, sql=True, networking=True)
+    print(results)
     assert len(results) == len(EXPECT_RESULTS[NUM_ROWS]['increments_per_hour'][hour])
     assert results == EXPECT_RESULTS[NUM_ROWS]['increments_per_hour'][hour]
 

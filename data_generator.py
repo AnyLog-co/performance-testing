@@ -14,9 +14,10 @@ PROTOCOLS = os.path.join(ROOT_PATH, 'protocols')
 sys.path.insert(0, DATA_GENERATORS)
 sys.path.insert(0, PROTOCOLS)
 
-START_TIMESTAMP = datetime.datetime(year=2022, month=8, day=27, hour=15, minute=50, second=12, microsecond=577987)
+START_TIMESTAMP = datetime.datetime(year=2022, month=8, day=27, hour=15, minute=50, second=12) + datetime.timedelta(microseconds=random.choice(range(100, 300000)))
 SECOND_INCREMENTS = 0.864
 ROWS_24h_INCREMENTS = 100000
+
 
 VALUE_ARRAY = [
    -1 * math.pi, -1 * math.pi/2, -1 * math.pi/3,
@@ -171,7 +172,7 @@ def __insertion_time(conn:str, db_name:str, table_name:str)->datetime.timedelta:
     else:
         if int(r.status_code) != 200:
             print(f'FAiled to execute GET against {conn} (Error: {r.status_code})')
-            return None
+            return None, None
 
     min_ts = datetime.datetime.strptime(r.json()['Query'][0]['min_ts'], format)
     max_ts = datetime.datetime.strptime(r.json()['Query'][0]['max_ts'], format)
