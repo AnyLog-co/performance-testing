@@ -14,6 +14,7 @@ PROTOCOLS = os.path.join(ROOT_PATH, 'protocols')
 sys.path.insert(0, DATA_GENERATORS)
 sys.path.insert(0, PROTOCOLS)
 
+# base timestamp 2022-08-27 15:50:12
 START_TIMESTAMP = datetime.datetime(year=2022, month=8, day=27, hour=15, minute=50, second=12) + datetime.timedelta(microseconds=random.choice(range(100, 300000)))
 SECOND_INCREMENTS = 0.864
 ROWS_24h_INCREMENTS = 100000
@@ -70,15 +71,8 @@ def __send_data(conn:str, db_name:str, table_name:str, payload:list, send_time:f
 
     return status, send_time
 
-def __generate_timestamps(total_rows:int):
-    timestamps = []
-    for row_counter in range(total_rows):
-        seconds = SECOND_INCREMENTS * (ROWS_24h_INCREMENTS / total_rows) * row_counter
-        timestamps.append(START_TIMESTAMP + datetime.timedelta(seconds=seconds))
-    return timestamps
 
-
-def __generate_row(value:float, timestamp:datetime.datetime, row_counter:int)->dict:
+def __generate_row(value:float, base_row_time:float, row_counter:int)->dict:
     """
     Generate row to be inserted
     :global:
@@ -106,7 +100,8 @@ def __generate_row(value:float, timestamp:datetime.datetime, row_counter:int)->d
     #     row_value = math.sin(value)
     # else:
     #     row_value = math.cos(value)
-
+    seconds = base_row_time * row_counter
+    timestamp = START_TIMESTAMP + datetime.timedelta(seconds=seconds)
     row = {'timestamp': timestamp.strftime('%Y-%m-%d %H:%M:%S.%f'), 'value': value}
 
     return row
@@ -137,18 +132,16 @@ def main():
     send_time = 0
     row_times = 0
 
-    start_time = time.time()
-    timestamps = __generate_timestamps(total_rows=args.total_rows)
-    generate_timestamps = time.time() - start_time
+    base_row_time = SECOND_INCREMENTS * (ROWS_24h_INCREMENTS / args.total_rows)
 
-    for row_id in range(args.total_rows):
-        row_time = time.time()
-        values.append(__generate_row(value=VALUE_ARRAY[value_array], timestamp=timestamps[row_id], row_counter=row_id))
-        row_times += time.time() - row_time
+    for row_counter in range(args.total_rows):
+
+        values.append(__generate_row(value=VALUE_ARRAY[value_array], base_row_time=base_row_time, row_counter=row_counter))
         value_array += 1
         if value_array == len(VALUE_ARRAY):
             value_array = 0
-        if row_id % 10000:
+
+        if len(values) >= 10000:
             status, updated_send_time = __send_data(conn=args.conn, db_name=args.db_name, table_name=args.table_name,
                                                     payload=values, send_time=send_time)
             if status is True:
@@ -159,16 +152,9 @@ def main():
         status, updated_send_time = __send_data(conn=args.conn, db_name=args.db_name, table_name=args.table_name,
                                                 payload=values, send_time=send_time)
         if status is True:
-            values = []
             send_time = updated_send_time
 
-    total_time = time.time() - start_time
-    print('Summary: '
-          +f'\n\tTotal Rows: {args.total_rows}'
-          +f'\n\tTotal Time: {datetime.timedelta(seconds=total_time)}'
-          +f'\n\tGenerated Row Time: {datetime.timedelta(seconds=row_times + generate_timestamps)}'
-          +f'\n\tInsert Time: {datetime.timedelta(seconds=send_time)}'
-          )
+    print(f'Insert Time: {datetime.timedelta(seconds=send_time)}')
 
 
 
