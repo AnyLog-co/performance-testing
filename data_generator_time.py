@@ -154,6 +154,14 @@ def main():
             if status is True:
                 values = []
                 send_time = updated_send_time
+
+    if len(values) > 0:
+        status, updated_send_time = __send_data(conn=args.conn, db_name=args.db_name, table_name=args.table_name,
+                                                payload=values, send_time=send_time)
+        if status is True:
+            values = []
+            send_time = updated_send_time
+
     total_time = time.time() - start_time
     print('Summary: '
           +f'\n\tTotal Rows: {args.total_rows}'
