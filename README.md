@@ -113,7 +113,7 @@ connection found in step 5 of the Master node. Remember, you'll be using the ext
 if other nodes are on a different network, and the local TCP information as the `LEDGER_CONN` if they're on the same network.
 
 
-4. (Optional) In [docker-compose](deployments/query-remote-cli/anylog_configs.env) update configurations like: 
+4. (Optional) In [docker-compose](deployments/anylog-operator1/anylog_configs.env) update configurations like: 
     * Node Name
     * Company Name 
     * AnyLog TCP or REST ports - note if you change the TCP port, you need to update the _LEDGER_CONN_ accordingly 
@@ -164,10 +164,34 @@ The following inserts  data using the REST _PUT_ command into an Operator node; 
 consists of only timestamp and value.  
 
 ```shell
-python3 ~/performance-testing/data_generator.py ${OPERATOR_NODE_IP}:${OPERATOR_NODE_PORT} \
+python3 performance-testing/data_generator.py ${OPERATOR_NODE_IP}:${OPERATOR_NODE_REST_PORT} \
   --db-name test \ 
   --table-name  rand_data_small_6_25m \
   --total-rows 25000000 \ 
+```
+
+Once [data_generator.py](data_generator.py) is complete, the Operator node may not have finished inserting all the data 
+into the database. To check the status of the data there are 3 things you can do:
+
+* get streaming - Statistics on the streaming processes.
+```shell
+curl -X GET ${OPERATOR_NODE_IP}:${OPERATOR_NODE_REST_PORT} \
+   -H "command: get streaming" \ 
+   -H "User-Agent: AnyLog/1.23" 
+```
+* get operator - Information on the Operator processes and configuration.
+```shell
+curl -X GET ${OPERATOR_NODE_IP}:${OPERATOR_NODE_REST_PORT} \
+   -H "command: get operator" \ 
+   -H "User-Agent: AnyLog/1.23" 
+```
+
+* query the data - notice the destination is set **not** `network` as we want information only about a specific operator.
+```shell
+curl -X GET ${OPERATOR_NODE_IP}:${OPERATOR_NODE_REST_PORT} \
+   -H 'command: sql test format=table "select count(*) from rand_data_small_6_25m' \ 
+   -H "User-Agent: AnyLog/1.23" \ 
+   -H "destination: ${OPERATOR_NODE_IP}:${OPERATOR_NODE_TCP_PORT}" 
 ```
 
 ## Executing Queries
@@ -175,7 +199,7 @@ The _Query_ node also deploys the Remote-CLI, which you can use instead of using
 
 * Scans the data to determine min, max, count over the data.
 ```shell
-curl -X GET ${QUERY_NODE_IP}:${QUERY_NODE_PORT} \
+curl -X GET ${QUERY_NODE_IP}:${QUERY_NODE_REST_PORT} \
   -H 'command: sql test format=table and extend=(+ip, +node_name) "select min(insert_timestamp), max(insert_timestamp), count(*)::format(:,) from rand_data_small_6_25m;"' \ 
   -H 'User-Agent: AnyLog/1.23' \
   -H 'destination Network' 
@@ -183,7 +207,7 @@ curl -X GET ${QUERY_NODE_IP}:${QUERY_NODE_PORT} \
 
 * Is doing more CPU intensive - returning the summary of every hour
 ```shell
-curl -X GET ${QUERY_NODE_IP}:${QUERY_NODE_PORT} \
+curl -X GET ${QUERY_NODE_IP}:${QUERY_NODE_REST_PORT} \
   -H 'command: sql test format=table  "select increments(hour, 1, timestamp), min(timestamp), max(timestamp), min(value), avg(value), max(value), count(*)::format(:,) from rand_data_small_6_25m;"' \ 
   -H 'User-Agent: AnyLog/1.23' \ 
   -H 'destination Network' 

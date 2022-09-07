@@ -92,9 +92,7 @@ def __generate_row(value:float, base_row_time:float, row_counter:int)->dict:
     """
     Generate row to be inserted
     :global:
-        START_TIMESTAMP:datetime.datetime - intial timestamp
-        SECOND_INCREMENTS:float - Based on ROWS_24h_INCREMENTS, calculate increments for 24 hour period
-        ROWS_24h_INCREMENTS:int - based number of rows in 24 hours
+        START_TIMESTAMP:datetime.datetime - initial timestamp
     :args:
         value:float - pi value for VALUE_ARRAY
         total_rows:int - total number of row to insert
@@ -110,12 +108,6 @@ def __generate_row(value:float, base_row_time:float, row_counter:int)->dict:
     :return:
         row
     """
-    # if row_counter % 10 == 0:
-    #     row_value = math.tan(value)
-    # elif row_counter % 2 == 0:
-    #     row_value = math.sin(value)
-    # else:
-    #     row_value = math.cos(value)
     seconds = base_row_time * row_counter
     timestamp = START_TIMESTAMP + datetime.timedelta(seconds=seconds)
     row = {'timestamp': timestamp.strftime('%Y-%m-%d %H:%M:%S.%f'), 'value': value}
@@ -125,14 +117,22 @@ def __generate_row(value:float, base_row_time:float, row_counter:int)->dict:
 
 def main():
     """
-    The following provides the ability to insert data into AnyLog against logical table rand_data.
+    The following provides the ability to insert data into AnyLog against logical table
     :positional arguments:
       conn               REST connection info. If print then rows will be printed to screen
-        - options: print, file, ip:port,ip:port,ip:port...
     :optional arguments:
       -h, --help         show this help message and exit
-      --db-name DB_NAME  logical database name
-      --rows ROWS        Number of row to insert
+      --db-name     DB_NAME     logical database name
+      --table-name  TABLE_NAME  table to store data in
+      --total-rows  TOTAL_ROWS  Number of row to insert
+    :global:
+        START_TIMESTAMP:datetime.datetime - initial timestamp (2022-08-27 15:50:12)
+        SECOND_INCREMENTS:float - Based on ROWS_24h_INCREMENTS, calculate increments for 24 hour period
+        ROWS_24h_INCREMENTS:int - based number of rows in 24 hours
+    :params:
+        value_array:int - current place holder in VALUE_ARRAY
+        values:list - list of values to send into AnyLog
+        send_time:float - total process time thus far
     :sample data:
         {"timestamp": "2022-08-23 00:48:36.219970", "value": 51.8812}
     """
@@ -142,11 +142,10 @@ def main():
     parser.add_argument('--table-name', type=str, default='rand_data', help='table to store data in')
     parser.add_argument('--total-rows', type=int, default=100000, help='Number of row to insert')
     args = parser.parse_args()
+
     value_array = 0
-    total_time = 0
     values = []
     send_time = 0
-    row_times = 0
 
     base_row_time = SECOND_INCREMENTS * (ROWS_24h_INCREMENTS / args.total_rows)
 
