@@ -159,6 +159,18 @@ al > exit workers
 al> set query pool 6 
 ```
 
+### Clean node
+1. On Master node execute [clean_node.py](clean_node.py) - remove policies from blockchain 
+```shell
+python3 performance-testing/clean_node.py ${MASTER_NODE_IP}:${MASTER_NODE_REST}
+```
+
+2. On Operator node - remove all data 
+```shell
+cd performance-testing/deployments/anylog-operator1
+docker-compose down -v 
+```
+
 ## Inserting Data 
 The following inserts  data using the REST _PUT_ command into an Operator node; data is over a 24-hour period, and 
 consists of only timestamp and value.  

@@ -1,7 +1,6 @@
 import argparse
 import datetime
 import json
-import math
 import os
 import random
 import requests
