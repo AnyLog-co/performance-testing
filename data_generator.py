@@ -42,6 +42,22 @@ VALUE_ARRAY = [
 
 
 def __send_data(conn:str, db_name:str, table_name:str, payload:list, send_time:float)->(bool, float):
+    """
+    Send data via REST PUT
+    :args:
+        conn:str - REST connection information
+        db_name:str - logical database name
+        table_name:str - logical table name
+        payload:list - content to be sent into AnyLog
+        send_time:float - total process time thus far
+    :params:
+        status:bool
+        header:dict - REST header information
+        payloads:str - JSON list of payload
+        r:requests.Requests - POST request results
+    :return:
+        status, updated send_time
+    """
     status = True
     header = {
         'type': 'json',
@@ -155,7 +171,6 @@ def main():
             send_time = updated_send_time
 
     print(f'Insert Time: {datetime.timedelta(seconds=send_time)}')
-
 
 
 if __name__ == '__main__':
