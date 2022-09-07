@@ -1,10 +1,10 @@
 version: "2.2"
 services:
-  postgres:
+  postgres1:
     image: postgres:14.0-alpine
     env_file:
       - postgres.env
-    container_name: postgres
+    container_name: postgres1
     restart: always
     stdin_open: true
     tty: true
@@ -16,24 +16,27 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
-  anylog-operator-node:
+      - pgdata1:/var/lib/postgresql/data
+  anylog-operator-node1:
+    depends_on:
+      postgres1:
+        condition: service_healthy
     image: anylogco/anylog-network:predevelop
     restart: always
     env_file:
       - anylog_configs.env
-    container_name: anylog-operator-node
+    container_name: anylog-operator-node1
     stdin_open: true
     tty: true
     network_mode: "host" 
     volumes:
-      - anylog-operator-node-anylog:/app/AnyLog-Network/anylog
-      - anylog-operator-node-blockchain:/app/AnyLog-Network/blockchain
-      - anylog-operator-node-data:/app/AnyLog-Network/data
-      - anylog-operator-node-local-scripts:/app/AnyLog-Network/scripts
+      - anylog-operator-node1-anylog:/app/AnyLog-Network/anylog
+      - anylog-operator-node1-blockchain:/app/AnyLog-Network/blockchain
+      - anylog-operator-node1-data:/app/AnyLog-Network/data
+      - anylog-operator-node1-local-scripts:/app/AnyLog-Network/scripts
 volumes:
-  pgdata:
-  anylog-operator-node-anylog:
-  anylog-operator-node-blockchain:
-  anylog-operator-node-data:
-  anylog-operator-node-local-scripts:
+  pgdata1:
+  anylog-operator-node1-anylog:
+  anylog-operator-node1-blockchain:
+  anylog-operator-node1-data:
+  anylog-operator-node1-local-scripts:
