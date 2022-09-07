@@ -125,7 +125,7 @@ if other nodes are on a different network, and the local TCP information as the 
     
 5. Deploy node - this will also deploy Postgres
 ```shell
-cd performance-testing/deployments/query-remote-cli
+cd performance-testing/deployments/anylog-operator1
 docker-compose up -d 
 ```
 
@@ -134,15 +134,16 @@ The `QUERY_POOL` value is used to set the number of threads supporting queries (
 on an operator (or query) query node execute the following: 
 1. Attach to the node
 ```shell
-# view all services 
+# view all docker instances  
 docker ps -a 
+
+# attach to a docker instance
 docker attach --detach-keys=ctrl-d ${DOCKER_SERVICE_NAME}
 
 << COMMENT
-# Sample Output
+# Sample Output - list of docker services on an operator node
 CONTAINER ID   IMAGE                                COMMAND                  CREATED        STATUS        PORTS                                           NAMES
 3bfc357af701   anylogco/anylog-network:predevelop   "/bin/sh -c 'python3…"   17 hours ago   Up 17 hours                                                   anylog-operator-node
-c0b8520ae833   mongo:latest                         "docker-entrypoint.s…"   22 hours ago   Up 17 hours   0.0.0.0:27017->27017/tcp, :::27017->27017/tcp   mongodb
 7273d336e561   postgres:14.0-alpine                 "docker-entrypoint.s…"   43 hours ago   Up 17 hours   0.0.0.0:5432->5432/tcp, :::5432->5432/tcp       postgres
 
 # Sample command for anylog-operator-node
@@ -153,7 +154,7 @@ docker attach --detach-keys=ctrl-d anylog-operator-node
 ```anylog
 al > exit workers 
 ```
-3. set pool new value
+3. set query pool to a new value
 ```anylog
 al> set query pool 6 
 ```
