@@ -131,7 +131,7 @@ docker-compose up -d
 
 ### Updating Query Pool 
 The `QUERY_POOL` value is used to set the number of threads supporting queries (the default is 3). To change / update 
-on an operator (or query) query node execute the following: 
+on an operator or query node execute the following: 
 1. Attach to the node
 ```shell
 # view all docker instances  
