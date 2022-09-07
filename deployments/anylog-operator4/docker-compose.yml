@@ -18,6 +18,9 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
   anylog-operator-node:
+    depends_on:
+      postgres:
+        condition: service_healthy
     image: anylogco/anylog-network:predevelop
     restart: always
     env_file:
