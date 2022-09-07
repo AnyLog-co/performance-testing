@@ -1,108 +1,50 @@
 # Performance Testing 
 
-The following package is intended to demonstrate performance testing against AnyLog. 
-
-Please review our [documentation](https://github.com/AnyLog-co/documentation) information and support regarding the 
-details of using AnyLog. 
+The following repository provides the tools needed to test AnyLog performance. 
 
 
-## Deploying Nodes
-The following requires 6 machines, either physical or virtual, that can communicate with one another. The original 
-performance testing was done in comperecent of 1, 2 and 4 operator nodes, each associated to a different cluster; as 
-shown in the diagram below. 
+## Requirements
+* 2 machines - either VM or physical to host _Master_ and _Query_ nodes 
+* 2 or more machines (either VM or physical) to act the _Operator_ nodes   
+* All nodes should be able to communicate with one another
 
-![peformance diagram](Performance_Testing_Diagram.png)
+## Testing Process 
+1. Deploy _Master_ + _Query_ Nodes 
+2. Deploy 1 _Operator_ node  
+3. Load data into _Operator_ node
+4. Execute queries against the operator 
+5. Clean the data on the operator node + remove node information from master 
+6. Deploy 2 _Operator_ nodes 
+7. Load half (1/2) of the data into Operator A and Operator B 
+8. Execute queries against both the operator nodes 
+9. Repeat Steps 5-8 with incrementing number of _Operator_ nodes  
 
+At the end of step 8, you should notice that the queries run faster when data is distributed on 2 nodes, as opposed to 1.   
 
-* Setting Up _Master Node_ on Machine 1 
-  1. Clone _performance-testing_ and log into _anyloguser_ on **all** machines
-  ```shell
-  git clone https://github.com/AnyLog-co/performance-testing
-  docker login -u anyloguser -p ${USER_API_PASSWORD}
-  ```
-  2. Deploy Postgres 
-  ```shell
-  cd performance-testing/deployments/postgres 
-  docker-compose up -d    
-  ```
-  3. Deploy Master Node
-    ```shell
-    cd performance-testing/deployments/anylog-master 
-    docker-compose up -d 
-    ```
-  4. Get Master Node TCP connection information - which will be used for the blockchain
-  ```anylog
-  # docker attach --detach-keys=ctrl-d anylog-master 
-  AL master-node +> get connections 
+## Deploying Nodes 
+### Master 
+### Query 
+### Operator
 
-    Type      External Address     Local Address        
-    ---------|--------------------|--------------------|
-    TCP      |172.104.138.63:32048|172.104.138.63:32048|
-    REST     |172.104.138.63:32049|172.104.138.63:32049|
-    Messaging|Not declared        |Not declared        |
-  ```
-  
+## Inserting Data 
 
-* Setting Up _Query Node_ - The query node is deployed with our [Remote-CLI](https://github.com/AnyLog-co/documentation/blob/master/northbound%20connectors/remote_cli.md)
-  1. Clone _performance-testing_ and log into _anyloguser_ on **all** machines
-  ```shell
-  git clone https://github.com/AnyLog-co/performance-testing
-  docker login -u anyloguser -p ${USER_API_PASSWORD}
-  ```
-  2. Update `ledger_conn` value in [anylog_configs.env](deployments/query-remote-cli/anylog_configs.env) 
-  ```dotenv
-  # vim deployments/query-remote-cli/anylog_configs.env
-  
-  # line 13 with local LEDGER_CONN value 
-  LEDGER_CONN=127.0.0.1:32048
-  
-  # Update LEDGER_CNN value
-  LEDGER_CONN=172.104.138.63:32048
-  ```
-  3. Deploy Query Node
-  ```shell
-  cd performance-testing/deployments/query-remote-cli 
-  docker-compose up -d 
-  ```
-  
+## Executing Queries
+The _Query_ node also deploys the Remote-CLI, which you can use instead of using cURL. Directions for Remote-CLI can be  
+found [here](https://github.com/AnyLog-co/documentation/blob/master/northbound%20connectors/remote_cli.md). Please make 
+sure the logical database and table names are consistent with your deployment.   
 
-* Setting up _Operator Node_ - Repeat the following steps on each physical node that will act as an operator. Keep in  
-in mind that each _anylog-operator_ directory is associated o a **unique** cluster.  
-  1. Clone _performance-testing_ and log into _anyloguser_ on **all** machines
-  ```shell
-  git clone https://github.com/AnyLog-co/performance-testing
-  docker login -u anyloguser -p ${USER_API_PASSWORD}
-  ```
-  2. Update `ledger_conn` value in [anylog_configs.env](deployments/anylog-operator1/anylog_configs.env) 
-  ```dotenv
-  # vim deployments/query-remote-cli/anylog_configs.env
-  
-  # line 13 with local LEDGER_CONN value 
-  LEDGER_CONN=127.0.0.1:32048
-  
-  # Update LEDGER_CNN value
-  LEDGER_CONN=172.104.138.63:32048
-  ```
-  3. Deploy Query Node
-  ```shell
-  cd performance-testing/deployments/query-remote-cli 
-  docker-compose up -d 
-  ```
-### Deployment Notes
-* Feel free to change any othwr configurations in the anylog_configs.env file(s).
-* To attach to a node: `docker attach --detach-keys="ctrl-d" ${NODE_NAME}`
-* The service name for all operator(s) is `anylog-operator`. as such it not possible to run multiple operators on the 
-same machine using this package. 
-
-## Generating Data
-The [data_generator.py](data_generator.py) will send a user-defined number of timestamp/value rows into 1 or more 
-Operator nodes; using REST POST. When sending data to multiple operators, the data generator uses a round-robin mechanism 
-to select which node to send data to. 
+* Scans the data to determine min, max, count over the data.
 ```shell
-cd performance-testing/
-# one node 
-python3 data_generator.py ${OPERATOR_IP}:${OPERATOR_PORT} --db-name test --table-name rand_data --total-rows 100000
+curl -X GET ${QUERY_NODE_IP}:${QUERY_NODE_PORT} \
+  -H 'command: sql test format=table and extend=(+ip, +node_name) "select min(insert_timestamp), max(insert_timestamp), count(*)::format(:,) from rand_data_small_6_25m;"' \ 
+  -H 'User-Agent: AnyLog/1.23' \
+  -H 'destination Network' 
+```
 
-# multiple nodes
-python3 data_generator.py ${OPERATOR_IP_1}:${OPERATOR_PORT_1},${OPERATOR_IP_2}:${OPERATOR_PORT_2} --db-name test --table-name rand_data --total-rows 100000
+* Is doing more CPU intensive - returning the summary of every hour
+```shell
+curl -X GET ${QUERY_NODE_IP}:${QUERY_NODE_PORT} \
+  -H 'command: sql test format=table  "select increments(hour, 1, timestamp), min(timestamp), max(timestamp), min(value), avg(value), max(value), count(*)::format(:,) from rand_data_small_6_50m;"' \ 
+  -H 'User-Agent: AnyLog/1.23' \ 
+  -H 'destination Network' 
 ```
