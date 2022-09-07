@@ -15,7 +15,7 @@ services:
       - remote-cli:/app/Remote-CLI/anylog_query/static/json
       - remote-cli-current:/app/Remote-CLI/anylog_query/static/blobs/current/
   anylog-query-node:
-    image: anylogco/anylog-network:${TAG}
+    image: anylogco/anylog-network:predevelop
     env_file:
       - anylog_configs.env
     container_name: anylog-query-node

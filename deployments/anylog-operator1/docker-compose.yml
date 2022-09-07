@@ -1,7 +1,24 @@
 version: "2.2"
 services:
+  postgres:
+    image: postgres:14.0-alpine
+    env_file:
+      - postgres.env
+    container_name: postgres
+    restart: always
+    stdin_open: true
+    tty: true
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
   anylog-operator-node:
-    image: anylogco/anylog-network:test
+    image: anylogco/anylog-network:predevelop
     restart: always
     env_file:
       - anylog_configs.env
@@ -15,6 +32,7 @@ services:
       - anylog-operator-node-data:/app/AnyLog-Network/data
       - anylog-operator-node-local-scripts:/app/AnyLog-Network/scripts
 volumes:
+  pgdata:
   anylog-operator-node-anylog:
   anylog-operator-node-blockchain:
   anylog-operator-node-data:
