@@ -170,9 +170,7 @@ python3 ~/performance-testing/data_generator.py ${OPERATOR_NODE_IP}:${OPERATOR_N
 ```
 
 ## Executing Queries
-The _Query_ node also deploys the Remote-CLI, which you can use instead of using cURL. Directions for Remote-CLI can be  
-found [here](https://github.com/AnyLog-co/documentation/blob/master/northbound%20connectors/remote_cli.md). Please make 
-sure the logical database and table names are consistent with your deployment.   
+The _Query_ node also deploys the Remote-CLI, which you can use instead of using cURL. Directions for Remote-CLI can be found [here](https://github.com/AnyLog-co/documentation/blob/master/northbound%20connectors/remote_cli.md). Please make sure the logical database and table names are consistent with your deployment.   
 
 * Scans the data to determine min, max, count over the data.
 ```shell
