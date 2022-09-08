@@ -1,10 +1,10 @@
 version: "2.2"
 services:
-  postgres1:
+  postgres3:
     image: postgres:14.0-alpine
     env_file:
       - postgres.env
-    container_name: postgres1
+    container_name: postgres3
     restart: always
     stdin_open: true
     tty: true
