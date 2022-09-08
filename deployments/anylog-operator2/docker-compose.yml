@@ -14,10 +14,10 @@ services:
       timeout: 5s
       retries: 5
     expose:
-      - ${PGPORT}
+      - 5434
     ports:
-      - "${PGPORT}:${PGPORT}"
-    command: -p ${PGPORT}
+      - "5434:5434"
+    command: -p 5434
     volumes:
       - pgdata2:/var/lib/postgresql/data
   anylog-operator-node2:
