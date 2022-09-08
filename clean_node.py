@@ -67,7 +67,7 @@ def main():
         ids:list - list of policy IDs
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('master-node', type=str, default='127.0.0.1:32049', help='master node REST IP + Port')
+    parser.add_argument('master_node', type=str, default='127.0.0.1:32049', help='master node REST IP + Port')
     args = parser.parse_args()
 
     ids = get_ids(master_node=args.master_node)
