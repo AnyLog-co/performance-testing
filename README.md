@@ -46,8 +46,7 @@ cd performance-testing/deployments/anylog-master
 docker-compose up -d 
 ```
 
-5. Using cURL get connection information  - You'll be using the external TCP information as the `LEDGER_CONN` if other 
-nodes are on a different network, and the local TCP information as the `LEDGER_CONN` if they're on the same network.
+5. Using cURL get connection information  - You'll be z
 ```shell
 curl -X GET ${MASTER_NODE_IP}:${MASTER_NODE_PORT} \ 
   -H "command: get connections" \ 
