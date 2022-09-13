@@ -197,9 +197,11 @@ curl -X GET ${OPERATOR_NODE_IP}:${OPERATOR_NODE_REST_PORT} \
    -H "User-Agent: AnyLog/1.23" 
 ```
 
-* query the data - notice the destination is set **not** `network` as we want information only about a specific operator.
+* query the data - notice the destination is set **not** `network` as we want information only about a specific operator. 
+The reason we are querying against query node because by default the configurations do not start a [system_query](https://github.com/AnyLog-co/documentation/blob/master/anylog%20commands.md#sql-command) 
+database on the operator node(s).  
 ```shell
-curl -X GET ${OPERATOR_NODE_IP}:${OPERATOR_NODE_REST_PORT} \
+curl -X GET ${QUERY_NODE_IP}:${QUERY_NODE_PORT} \
    -H 'command: sql test format=table "select count(*) from rand_data_small_6_25m' \ 
    -H "User-Agent: AnyLog/1.23" \ 
    -H "destination: ${OPERATOR_NODE_IP}:${OPERATOR_NODE_TCP_PORT}" 
