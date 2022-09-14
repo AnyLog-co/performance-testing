@@ -81,9 +81,9 @@ if other nodes are on a different network, and the local TCP information as the 
 4. (Optional) In [docker-compose](deployments/query-remote-cli/anylog_configs.env) update configurations like: 
     * Node Name
     * Company Name 
-    * AnyLog TCP or REST ports - note if you change the TCP port, you need to update the _LEDGER_CONN_ accordingly 
+    * AnyLog TCP or REST ports 
     * Blockchain sync time
-    * Query poool
+    * Query pool
    
 
 5. Deploy node - this will also deploy Postgres
@@ -115,7 +115,7 @@ if other nodes are on a different network, and the local TCP information as the 
 4. (Optional) In [docker-compose](deployments/anylog-operator1/anylog_configs.env) update configurations like: 
     * Node Name
     * Company Name 
-    * AnyLog TCP or REST ports - note if you change the TCP port, you need to update the _LEDGER_CONN_ accordingly 
+    * AnyLog TCP or REST ports 
     * logical database name
     * cluster name - please note if 2 or more operators have the same cluster then the data between them will be shared (ie. High-Availability) 
     * Blockchain sync time
